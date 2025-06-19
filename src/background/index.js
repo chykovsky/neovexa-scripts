@@ -1,5 +1,5 @@
 import '@/common/browser';
-import { getActiveTab, makePause, i18n } from '@/common';
+import { getActiveTab, makePause } from '@/common';
 import { deepCopy } from '@/common/object';
 import { handleHotkeyOrMenu } from './utils/icon';
 import { addPublicCommands, commands, init } from './utils';
@@ -30,7 +30,7 @@ addPublicCommands({
     return ms > 0 && makePause(ms);
   },
 
-  async ExecuteUserscriptInTab(data, src) {
+  async ExecuteUserscriptInTab(data, _src) {
     const { tabId, scriptCode, scriptName, scriptId, fileContent } = data;
     console.log(
       `tabId: ${tabId}, scriptCode: ${scriptCode}, scriptName: ${scriptName}, scriptId: ${scriptId}, fileContent: ${fileContent}`,
