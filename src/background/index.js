@@ -30,7 +30,7 @@ addPublicCommands({
     return ms > 0 && makePause(ms);
   },
 
-  async ExecuteUserscriptInTab(data, _src) {
+  async ExecuteUserscriptInTab(data) {
     const { tabId, scriptCode, scriptName, scriptId, fileContent } = data;
     console.log(
       `tabId: ${tabId}, scriptCode: ${scriptCode}, scriptName: ${scriptName}, scriptId: ${scriptId}, fileContent: ${fileContent}`,
