@@ -12,6 +12,11 @@ module.exports = {
       bugfixes: true,
       // debug: true,
       loose: true,
+      targets: {
+      node: 'current',
+      browsers: ['last 2 Chrome versions', 'last 2 Firefox versions', 'last 2 Edge versions'],
+      // or use targets: "> 0.25%, not dead"
+    },
     }],
   ],
   plugins: [

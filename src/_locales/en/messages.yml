@@ -1047,3 +1047,27 @@ visitWebsite:
   description: Label for link to open Violentmonkey website.
   message: Visit Website
   touched: false
+errorFailedToExecuteScript:
+  description: Failed to execute script.
+  message: Failed to execute script "{name}"
+filePickerSectionTitle:
+  description: Data File
+  message: Data File
+filePickerDropHint:
+  description: Drag & drop your file here
+  message: Drag & drop your file here
+filePickerSelected:
+  description: Selected fileName
+  message: Selected {fileName}
+filePickerClear:
+  description: Clear file selection
+  message: Clear
+filePickerInvalidFile:
+  description: Please select a CSV file.
+  message: Please select a CSV file
+filePickerFileCleared:
+  description: File selection cleared.
+  message: File selection cleared
+filePickerSelectFirst:
+  description: Please select an invoice data file first.
+  message: Please select an invoice data file first

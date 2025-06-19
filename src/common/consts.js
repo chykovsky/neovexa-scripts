@@ -1,5 +1,10 @@
 // SAFETY WARNING! Exports used by `injected` must make ::safe() calls and use __proto__:null
 
+// Add at the very top of src/common/consts.js:
+export const AUTO = 'auto';
+export const PAGE = 'page';
+export const CONTENT = 'content';
+
 export const CHARSET_UTF8 = 'charset=UTF-8';
 export const FORM_URLENCODED = 'application/x-www-form-urlencoded';
 export const INFERRED = 'inferred';

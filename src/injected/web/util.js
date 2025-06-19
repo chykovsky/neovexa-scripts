@@ -1,3 +1,5 @@
+const SafeSymbol = Symbol;
+
 const isConcatSpreadableSym = SafeSymbol.isConcatSpreadable;
 
 export const safeConcat = (...arrays) => {

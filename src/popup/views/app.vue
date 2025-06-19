@@ -7,18 +7,24 @@
     @mouseleave.capture="delegateMouseLeave"
     @focus.capture="updateMessage"
     :data-is-applied="optionsData.isApplied"
-    :style="{'max-height': store.maxHeight}"
-    :class="store.failure">
+    :style="{ 'max-height': store.maxHeight }"
+    :class="store.failure"
+  >
     <div class="flex menu-buttons">
       <div class="logo">
-        <img src="/public/images/icon128.png">
+        <img src="/public/images/icon128.png" />
       </div>
       <div class="flex-1 ext-name" v-text="NAME" />
       <span
         class="menu-area"
-        :data-message="optionsData.isApplied ? i18n('menuScriptEnabled') : i18n('menuScriptDisabled')"
+        :data-message="
+          optionsData.isApplied
+            ? i18n('menuScriptEnabled')
+            : i18n('menuScriptDisabled')
+        "
         :tabIndex
-        @click="onToggle">
+        @click="onToggle"
+      >
         <icon :name="getSymbolCheck(optionsData.isApplied)"></icon>
       </span>
       <span
@@ -27,42 +33,49 @@
         :tabIndex
         @contextmenu.prevent="showSettings = !showSettings"
         @auxclick="$event.button !== 2 && onManage($event)"
-        @click="onManage">
+        @click="onManage"
+      >
         <icon name="cog"></icon>
       </span>
       <span
         class="menu-area"
         :data-message="i18n('menuNewScript')"
         :tabIndex
-        @click="onCreateScript">
+        @click="onCreateScript"
+      >
         <icon name="plus"></icon>
       </span>
-      <span
-        class="menu-area"
-        :tabIndex
-        :_item.prop="{}"
-        @click="showExtras">
+      <span class="menu-area" :tabIndex :_item.prop="{}" @click="showExtras">
         <icon name="more" />
       </span>
     </div>
     <div class="menu" v-if="store.injectable" v-show="store.domain">
       <div class="menu-item menu-area menu-find">
         <template v-for="(url, text, i) in findUrls" :key="url">
-          <a target="_blank" :class="{ ellipsis: !i, 'mr-1': !i, 'ml-1': i }"
-             :href="url" :data-message="url.split('://')[1]" :tabIndex>
-            <icon name="search" v-if="!i"/>{{text}}
+          <a
+            target="_blank"
+            :class="{ ellipsis: !i, 'mr-1': !i, 'ml-1': i }"
+            :href="url"
+            :data-message="url.split('://')[1]"
+            :tabIndex
+          >
+            <icon name="search" v-if="!i" />{{ text }}
           </a>
           <template v-if="!i">/</template>
         </template>
       </div>
     </div>
     <div class="failure-reason" v-if="store.failureText">
-      <span v-text="store.failureText"/>
-      <code v-text="store.blacklisted" v-if="store.blacklisted" class="ellipsis inline-block"/>
+      <span v-text="store.failureText" />
+      <code
+        v-text="store.blacklisted"
+        v-if="store.blacklisted"
+        class="ellipsis inline-block"
+      />
     </div>
     <div v-if="showSettings" class="mb-1c menu settings">
-      <settings-popup/>
-      <button v-text="i18n('buttonClose')" @click="showSettings = false"/>
+      <settings-popup />
+      <button v-text="i18n('buttonClose')" @click="showSettings = false" />
     </div>
     <div
       v-for="scope in injectionScopes"
@@ -72,13 +85,19 @@
         'block-scroll': extras,
       }"
       :data-type="scope.name"
-      :key="scope.name">
+      :key="scope.name"
+    >
       <div
         class="menu-item menu-area menu-group"
         :tabIndex
-        @click="toggleMenu(scope.name)">
+        @click="toggleMenu(scope.name)"
+      >
         <icon name="arrow" class="icon-collapse"></icon>
-        <div class="flex-auto" v-text="scope.title" :data-totals="scope.totals" />
+        <div
+          class="flex-auto"
+          v-text="scope.title"
+          :data-totals="scope.totals"
+        />
       </div>
       <div class="submenu">
         <div
@@ -92,7 +111,8 @@
             'extras-shown': extras === item,
             'excludes-shown': item.excludes,
           }"
-          class="script">
+          class="script"
+        >
           <div
             class="menu-item menu-area"
             :tabIndex
@@ -100,61 +120,105 @@
             @focus="focusedItem = item"
             @keydown.enter.exact.stop="onEditScript(item)"
             @keydown.space.exact.stop="onToggleScript(item)"
-            @click="onToggleScript(item)">
-            <img class="script-icon" :src="item.data.safeIcon">
+            @click="onToggleScript(item)"
+          >
+            <img class="script-icon" :src="item.data.safeIcon" />
             <icon :name="getSymbolCheck(item.data.config.enabled)"></icon>
-            <div class="script-name ellipsis"
-                 @click.ctrl.exact.stop="onEditScript(item)"
-                 @contextmenu.exact.stop.prevent="onEditScript(item)"
-                 @mousedown.middle.exact.stop="onEditScript(item)">
-              <sup class="syntax" v-if="item.data.syntax" v-text="i18n('msgSyntaxError')"/>
-              {{item.name}}
-              <a v-if="!store.failure && item.data.more"
-                 class="tardy" tabindex="0" :title="TARDY_MATCH"
-                 @click.stop="note = note === TARDY_MATCH ? '' : TARDY_MATCH">
-                <Icon name="info"/>
+            <div
+              class="script-name ellipsis"
+              @click.ctrl.exact.stop="onEditScript(item)"
+              @contextmenu.exact.stop.prevent="onEditScript(item)"
+              @mousedown.middle.exact.stop="onEditScript(item)"
+            >
+              <sup
+                class="syntax"
+                v-if="item.data.syntax"
+                v-text="i18n('msgSyntaxError')"
+              />
+              {{ item.name }}
+              <a
+                v-if="!store.failure && item.data.more"
+                class="tardy"
+                tabindex="0"
+                :title="TARDY_MATCH"
+                @click.stop="note = note === TARDY_MATCH ? '' : TARDY_MATCH"
+              >
+                <Icon name="info" />
               </a>
             </div>
-            <div class="upd ellipsis" :title="item.upd" :data-error="item.updError"/>
+            <div
+              class="upd ellipsis"
+              :title="item.upd"
+              :data-error="item.updError"
+            />
           </div>
-          <div class="submenu-buttons"
-               v-show="showButtons(item)">
+          <div class="submenu-buttons" v-show="showButtons(item)">
             <!-- Using a standard tooltip that's shown after a delay to avoid nagging the user -->
-            <div class="submenu-button" :tabIndex @click="onEditScript(item)"
-                 :title="i18n('buttonEditClickHint')">
+            <div
+              class="submenu-button"
+              :tabIndex
+              @click="onEditScript(item)"
+              :title="i18n('buttonEditClickHint')"
+            >
               <icon name="code"></icon>
             </div>
             <div
               class="submenu-button"
               :tabIndex
               :_item.prop="item"
-              @click="showExtras">
-              <icon name="more"/>
+              @click="showExtras"
+            >
+              <icon name="more" />
+            </div>
+            <div
+              class="submenu-button"
+              :tabIndex
+              @click="onRunScriptForPopup(item)"
+              :title="'Run current script'"
+            >
+              <icon name="play" />
             </div>
           </div>
           <div v-if="item.excludes" class="excludes-menu mb-1c mr-1c">
-            <button v-for="(val, key) in item.excludes[1]" :key
-                    v-text="val" class="ellipsis" :title="`*://${val}/*`"
-                    @click="onExcludeSave(item, `*://${val}/*`)"/>
-            <input v-model="item.excludes[0]" spellcheck="false"
-                   @keypress.enter="onExcludeSave(item)"
-                   @keydown.esc.exact.stop.prevent="onExcludeClose(item)"/>
+            <button
+              v-for="(val, key) in item.excludes[1]"
+              :key
+              v-text="val"
+              class="ellipsis"
+              :title="`*://${val}/*`"
+              @click="onExcludeSave(item, `*://${val}/*`)"
+            />
+            <input
+              v-model="item.excludes[0]"
+              spellcheck="false"
+              @keypress.enter="onExcludeSave(item)"
+              @keydown.esc.exact.stop.prevent="onExcludeClose(item)"
+            />
             <!-- Esc interception works in Chrome not in Firefox -->
-            <button v-text="i18n('buttonOK')" @click="onExcludeSave(item)"/>
-            <button v-text="i18n('buttonCancel')" @click="onExcludeClose(item)"/>
+            <button v-text="i18n('buttonOK')" @click="onExcludeSave(item)" />
+            <button
+              v-text="i18n('buttonCancel')"
+              @click="onExcludeClose(item)"
+            />
             <!-- not using tooltip to preserve line breaks -->
             <details class="mb-1">
-              <summary><icon name="info"/></summary>
-              <small>{{i18n('menuExcludeHint')}} {{i18n('labelRelated')}}<a
-                v-text="i18n('labelExcludeMatch')" target="_blank"
-                :href="VM_DOCS_MATCHING"/>
+              <summary><icon name="info" /></summary>
+              <small
+                >{{ i18n('menuExcludeHint') }} {{ i18n('labelRelated')
+                }}<a
+                  v-text="i18n('labelExcludeMatch')"
+                  target="_blank"
+                  :href="VM_DOCS_MATCHING"
+                />
               </small>
             </details>
           </div>
           <div class="submenu-commands">
             <div
               class="menu-item menu-area"
-              v-for="({ autoClose = true, text, title }, key) in store.commands[item.id]"
+              v-for="({ autoClose = true, text, title }, key) in store.commands[
+                item.id
+              ]"
               :key
               :tabIndex
               :cmd.prop="[item.id, key, autoClose]"
@@ -162,7 +226,8 @@
               @mousedown="onCommand"
               @mouseup="onCommand"
               @keydown.enter="onCommand"
-              @keydown.space="onCommand">
+              @keydown.space="onCommand"
+            >
               <icon name="command" />
               <div class="flex-auto ellipsis" v-text="text" />
             </div>
@@ -170,42 +235,124 @@
         </div>
       </div>
     </div>
-    <div class="failure-reason" v-if="note || store.injectionFailure" :class="{note}">
-      <div v-text="note || i18n('menuInjectionFailed')"/>
-      <a v-text="i18n('menuInjectionFailedFix')" href="#"
-         v-if="!note && store.injectionFailure.fixable"
-         @click.prevent="onInjectionFailureFix"/>
+    <!-- --- NEW FILE PICKER SECTION START --- -->
+    <div class="file-picker-section">
+      <h3>{{ i18n('filePickerSectionTitle') }}</h3>
+      <input
+        type="file"
+        ref="fileInput"
+        @change="handleFileChange"
+        accept=".csv, application/vnd.ms-excel, text/csv"
+        style="display: none"
+      />
+      <div
+        class="drop-area"
+        @click="triggerFileInput"
+        @dragover.prevent="handleDragOver"
+        @dragleave="handleDragLeave"
+        @drop.prevent="handleDrop"
+        :class="{ 'drag-over': isDraggingOver }"
+      >
+        <p v-if="selectedFileName" class="selected-file-name">
+          {{ i18n('filePickerSelected', selectedFileName) }}
+          <span class="clear-file" @click.stop="clearSelectedFile">
+            {{ i18n('filePickerClear') }}
+          </span>
+        </p>
+        <p v-else>
+          {{ i18n('filePickerDropHint') }}<br />or<br /><span class="underline">
+            click to select</span
+          >
+        </p>
+      </div>
+      <p class="file-picker-status" v-if="filePickerMessage">
+        {{ filePickerMessage }}
+      </p>
     </div>
-    <div class="incognito"
-       v-if="store.tab?.incognito"
-       v-text="i18n('msgIncognitoChanges')"/>
+    <!-- --- NEW FILE PICKER SECTION END --- -->
+    <div
+      class="failure-reason"
+      v-if="note || store.injectionFailure"
+      :class="{ note }"
+    >
+      <div v-text="note || i18n('menuInjectionFailed')" />
+      <a
+        v-text="i18n('menuInjectionFailedFix')"
+        href="#"
+        v-if="!note && store.injectionFailure.fixable"
+        @click.prevent="onInjectionFailureFix"
+      />
+    </div>
+    <div
+      class="incognito"
+      v-if="store.tab?.incognito"
+      v-text="i18n('msgIncognitoChanges')"
+    />
     <footer>
       <a v-if="reloadHint" v-text="reloadHint" :tabIndex @click="reloadTab" />
-      <a v-else target="_blank" :href="'https://' + HOME" :tabIndex v-text="HOME" />
+      <a
+        v-else
+        target="_blank"
+        :href="'https://' + HOME"
+        :tabIndex
+        v-text="HOME"
+      />
     </footer>
-    <div class="message" v-if="message" v-text="message"/>
+    <div class="message" v-if="message" v-text="message" />
     <div v-show="topExtras" ref="$topExtras" class="extras-menu">
-      <div v-text="i18n('labelSettings')" @click="onManage(1)" tabindex="0"/>
-      <div v-text="i18n('popupSettings')" @click="showSettings = true" tabindex="0"/>
-      <div v-text="i18n('updateListedCmd', `${Object.keys(store.updatableScripts).length}`)"
-           @click="onUpdateListed" tabindex="0"
-           v-if="store.updatableScripts"/>
-      <div v-text="i18n('skipScripts')" @click="onSkipTab" tabindex="0"
-           v-if="/^(https?|file):/.test(store.tab?.url) /* not reusing `injectable`
-           because iframes may run scripts even in non-injectable pages */"/>
+      <div v-text="i18n('labelSettings')" @click="onManage(1)" tabindex="0" />
+      <div
+        v-text="i18n('popupSettings')"
+        @click="showSettings = true"
+        tabindex="0"
+      />
+      <div
+        v-text="
+          i18n(
+            'updateListedCmd',
+            `${Object.keys(store.updatableScripts).length}`,
+          )
+        "
+        @click="onUpdateListed"
+        tabindex="0"
+        v-if="store.updatableScripts"
+      />
+      <div
+        v-text="i18n('skipScripts')"
+        @click="onSkipTab"
+        tabindex="0"
+        v-if="
+          /^(https?|file):/.test(store.tab?.url) /* not reusing `injectable`
+           because iframes may run scripts even in non-injectable pages */
+        "
+      />
     </div>
     <div v-if="extras" ref="$extras" class="extras-menu">
-      <a v-for="[url, text] in activeLinks"
-         :key="url" :href="url" :data-message="url" tabindex="0" v-text="text"
-         v-bind="EXTERNAL_LINK_PROPS"/>
-      <div v-text="i18n('menuExclude')" tabindex="0" @click="onExclude"/>
-      <div v-text="extras.data.config.removed ? i18n('buttonRestore') : i18n('buttonRemove')"
-           tabindex="0"
-           @click="onRemoveScript"/>
-      <div v-if="'upd' in extras"
-           v-text="i18n('buttonUpdate')"
-           tabindex="0"
-           @click="onUpdateScript"/>
+      <a
+        v-for="[url, text] in activeLinks"
+        :key="url"
+        :href="url"
+        :data-message="url"
+        tabindex="0"
+        v-text="text"
+        v-bind="EXTERNAL_LINK_PROPS"
+      />
+      <div v-text="i18n('menuExclude')" tabindex="0" @click="onExclude" />
+      <div
+        v-text="
+          extras.data.config.removed
+            ? i18n('buttonRestore')
+            : i18n('buttonRemove')
+        "
+        tabindex="0"
+        @click="onRemoveScript"
+      />
+      <div
+        v-if="'upd' in extras"
+        v-text="i18n('buttonUpdate')"
+        tabindex="0"
+        @click="onUpdateScript"
+      />
     </div>
   </div>
 </template>
@@ -215,19 +362,34 @@ import { computed, nextTick, onActivated, onMounted, reactive, ref } from 'vue';
 import { VM_DOCS_MATCHING } from '@/common/consts';
 import options from '@/common/options';
 import optionsDefaults, {
-  kFiltersPopup, kPopupWidth, kUpdateEnabledScriptsOnly,
+  kFiltersPopup,
+  kPopupWidth,
+  kUpdateEnabledScriptsOnly,
 } from '@/common/options-defaults';
 import {
-  getScriptHome, getScriptName, getScriptRunAt, getScriptSupportUrl, getScriptUpdateUrl,
-  i18n, makePause, sendCmdDirectly, sendTabCmd,
+  getScriptHome,
+  getScriptName,
+  getScriptRunAt,
+  getScriptSupportUrl,
+  getScriptUpdateUrl,
+  i18n,
+  makePause,
+  sendCmdDirectly,
+  sendTabCmd,
+  getActiveTab,
 } from '@/common';
 import handlers from '@/common/handlers';
 import { objectPick } from '@/common/object';
 import { EXTERNAL_LINK_PROPS, getActiveElement } from '@/common/ui';
 import Icon from '@/common/ui/icon';
 import SettingsPopup from '@/common/ui/settings-popup.vue';
-import { keyboardService, isInput, handleTabNavigation } from '@/common/keyboard';
+import {
+  keyboardService,
+  isInput,
+  handleTabNavigation,
+} from '@/common/keyboard';
 import { store } from '../utils';
+import { showMessage } from '@/common/ui'; // For displaying messages in the UI
 
 let mousedownElement;
 let focusBug;
@@ -240,12 +402,14 @@ const needsReload = reactive({});
 
 const $extras = ref();
 const $topExtras = ref();
-const optionsData = reactive(objectPick(optionsDefaults, [
-  IS_APPLIED,
-  kFiltersPopup,
-  kPopupWidth,
-  kUpdateEnabledScriptsOnly,
-]));
+const optionsData = reactive(
+  objectPick(optionsDefaults, [
+    IS_APPLIED,
+    kFiltersPopup,
+    kPopupWidth,
+    kUpdateEnabledScriptsOnly,
+  ]),
+);
 const activeMenu = ref('scripts');
 const showSettings = ref();
 const extras = ref();
@@ -258,15 +422,13 @@ const activeLinks = computed(makeActiveLinks);
 const injectionScopes = computed(makeInjectionScopes);
 const findUrls = computed(makeFindUrls);
 const reloadHint = computed(makeReloadHint);
-const tabIndex = computed(() => extras.value ? -1 : 0);
+const tabIndex = computed(() => (extras.value ? -1 : 0));
 
 options.hook((changes) => {
   for (const key in optionsData) {
     const v = changes[key];
     if (v != null) {
-      optionsData[key] = v && isObject(v)
-        ? { ...optionsData[key], ...v }
-        : v;
+      optionsData[key] = v && isObject(v) ? { ...optionsData[key], ...v } : v;
       if (key === kPopupWidth) document.body.style.width = v + 'px';
     }
   }
@@ -301,79 +463,94 @@ function makeActiveLinks() {
   ].filter(Boolean);
 }
 function makeInjectionScopes() {
-  const { sort, enabledFirst, groupRunAt, hideDisabled } = optionsData[kFiltersPopup];
+  const { sort, enabledFirst, groupRunAt, hideDisabled } =
+    optionsData[kFiltersPopup];
   const { injectable } = store;
   const groupDisabled = hideDisabled === 'group';
   const enabledOnly = optionsData[kUpdateEnabledScriptsOnly];
   let updatableScripts;
   return [
-    injectable && ['scripts', i18n('menuMatchedScripts'), groupDisabled || null],
-    injectable && groupDisabled && ['disabled', i18n('menuMatchedDisabledScripts'), false],
+    injectable && [
+      'scripts',
+      i18n('menuMatchedScripts'),
+      groupDisabled || null,
+    ],
+    injectable &&
+      groupDisabled && ['disabled', i18n('menuMatchedDisabledScripts'), false],
     ['frameScripts', i18n('menuMatchedFrameScripts')],
   ]
-  .filter(Boolean)
-  .map(([name, title, groupByEnabled]) => {
-    let list = store[name] || store.scripts;
-    if (groupByEnabled != null) {
-      list = list.filter(script => !script.config.enabled === !groupByEnabled);
-    }
-    const numTotal = list.length;
-    const numEnabled = groupByEnabled == null
-      ? list.reduce((num, script) => num + script.config.enabled, 0)
-      : numTotal;
-    if (hideDisabled === 'hide' || hideDisabled === true) {
-      list = list.filter(script => script.config.enabled);
-    }
-    list = list.map(script => {
-      const scriptName = getScriptName(script);
-      const { id } = script.props;
-      const { enabled, removed, shouldUpdate } = script.config;
-      const upd = !removed && getScriptUpdateUrl(script, { enabledOnly });
-      const item = {
-        id,
-        name: scriptName,
-        data: script,
-        key: `${
-          enabledFirst && +!enabled
-        }${
-          sort === 'alpha'
-            ? scriptName.toLowerCase()
-            : groupRunAt && RUN_AT_ORDER.indexOf(getScriptRunAt(script))
-        }${
-          1e6 + script.props.position
-        }`,
-        excludes: null,
-      };
-      if (upd) item.upd = null;
-      if (upd && shouldUpdate) {
-        if (!updatableScripts) updatableScripts = store.updatableScripts = {};
-        updatableScripts[id] = item;
+    .filter(Boolean)
+    .map(([name, title, groupByEnabled]) => {
+      let list = store[name] || store.scripts;
+      if (groupByEnabled != null) {
+        list = list.filter(
+          (script) => !script.config.enabled === !groupByEnabled,
+        );
       }
-      return item;
-    }).sort((a, b) => (a.key < b.key ? -1 : a.key > b.key));
-    return numTotal && {
-      name,
-      title,
-      list,
-      totals: numEnabled < numTotal
-        ? `${numEnabled} / ${numTotal}`
-        : `${numTotal}`,
-    };
-  }).filter(Boolean);
+      const numTotal = list.length;
+      const numEnabled =
+        groupByEnabled == null
+          ? list.reduce((num, script) => num + script.config.enabled, 0)
+          : numTotal;
+      if (hideDisabled === 'hide' || hideDisabled === true) {
+        list = list.filter((script) => script.config.enabled);
+      }
+      list = list
+        .map((script) => {
+          const scriptName = getScriptName(script);
+          const { id } = script.props;
+          const { enabled, removed, shouldUpdate } = script.config;
+          const upd = !removed && getScriptUpdateUrl(script, { enabledOnly });
+          const item = {
+            id,
+            name: scriptName,
+            data: script,
+            key: `${enabledFirst && +!enabled}${
+              sort === 'alpha'
+                ? scriptName.toLowerCase()
+                : groupRunAt && RUN_AT_ORDER.indexOf(getScriptRunAt(script))
+            }${1e6 + script.props.position}`,
+            excludes: null,
+          };
+          if (upd) item.upd = null;
+          if (upd && shouldUpdate) {
+            if (!updatableScripts)
+              updatableScripts = store.updatableScripts = {};
+            updatableScripts[id] = item;
+          }
+          return item;
+        })
+        .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key));
+      return (
+        numTotal && {
+          name,
+          title,
+          list,
+          totals:
+            numEnabled < numTotal
+              ? `${numEnabled} / ${numTotal}`
+              : `${numTotal}`,
+        }
+      );
+    })
+    .filter(Boolean);
 }
 function makeFindUrls() {
   const query = encodeURIComponent(store.domain);
   return {
-    [`${i18n('menuFindScripts')} (GF)`]: `https://greasyfork.org/scripts/by-site/${query}`,
+    [`${i18n(
+      'menuFindScripts',
+    )} (GF)`]: `https://greasyfork.org/scripts/by-site/${query}`,
     OUJS: `https://openuserjs.org/?q=${query}`,
   };
 }
 function makeReloadHint() {
   return (
-      store.failure === 'scripts-skipped' ||
-      IS_APPLIED in store && store[IS_APPLIED] !== optionsData[IS_APPLIED] ||
-      Object.values(needsReload).some(Boolean)
-  ) && i18n('reloadTab');
+    (store.failure === 'scripts-skipped' ||
+      (IS_APPLIED in store && store[IS_APPLIED] !== optionsData[IS_APPLIED]) ||
+      Object.values(needsReload).some(Boolean)) &&
+    i18n('reloadTab')
+  );
 }
 function toggleMenu(name) {
   activeMenu.value = activeMenu.value === name ? null : name;
@@ -391,7 +568,8 @@ async function showExtras(evt) {
     const menu = (isPerItem ? $extras : $topExtras).value;
     const top = Math.min(
       innerHeight - menu.getBoundingClientRect().height,
-      el.getBoundingClientRect().bottom);
+      el.getBoundingClientRect().bottom,
+    );
     menu.style.top = `${top}px`;
   }
 }
@@ -402,15 +580,16 @@ function onSkipTab() {
   sendCmdDirectly(SKIP_SCRIPTS, store.tab);
 }
 function onToggle() {
-  options.set(IS_APPLIED, optionsData[IS_APPLIED] = !optionsData[IS_APPLIED]);
+  options.set(IS_APPLIED, (optionsData[IS_APPLIED] = !optionsData[IS_APPLIED]));
   checkReload();
   updateMessage();
 }
 /** @param {number | MouseEvent} evt - index of tab to open in src/options/views/app.vue */
 function onManage(evt) {
-  sendCmdDirectly('OpenDashboard',
-    evt === 1 || evt.button === 1 || evt.ctrlKey ? TAB_SETTINGS : '')
-  .then(close);
+  sendCmdDirectly(
+    'OpenDashboard',
+    evt === 1 || evt.button === 1 || evt.ctrlKey ? TAB_SETTINGS : '',
+  ).then(close);
 }
 function onOpenUrl(e) {
   const el = e.target.closest('a[href][target=_blank]');
@@ -429,13 +608,29 @@ function onCommand(evt) {
   } else if (type === 'keydown' || mousedownElement === el) {
     const [id, key, autoClose] = el.cmd;
     const idMap = store.idMap;
-    const frameId = +Object.keys(idMap).find(frameIdStr => id in idMap[frameIdStr]);
-    sendTabCmd(store.tab.id, 'Command', {
-      id,
-      key,
-      evt: objectPick(evt, ['type', 'button', 'shiftKey', 'altKey', 'ctrlKey', 'metaKey',
-        'key', 'keyCode', 'code']),
-    }, { [kFrameId]: frameId }).then(autoClose && close);
+    const frameId = +Object.keys(idMap).find(
+      (frameIdStr) => id in idMap[frameIdStr],
+    );
+    sendTabCmd(
+      store.tab.id,
+      'Command',
+      {
+        id,
+        key,
+        evt: objectPick(evt, [
+          'type',
+          'button',
+          'shiftKey',
+          'altKey',
+          'ctrlKey',
+          'metaKey',
+          'key',
+          'keyCode',
+          'code',
+        ]),
+      },
+      { [kFrameId]: frameId },
+    ).then(autoClose && close);
   }
 }
 function onToggleScript(item) {
@@ -445,8 +640,7 @@ function onToggleScript(item) {
   sendCmdDirectly('UpdateScriptInfo', {
     id,
     config: { enabled },
-  })
-  .then(() => {
+  }).then(() => {
     data.config.enabled = enabled;
     if (!checkReload()) needsReload[id] = enabled !== data.runs;
   });
@@ -467,7 +661,10 @@ async function onInjectionFailureFix() {
   window.close();
 }
 function onRemoveScript() {
-  const { config, props: { id } } = extras.value.data;
+  const {
+    config,
+    props: { id },
+  } = extras.value.data;
   const removed = +!config.removed;
   config.removed = removed;
   sendCmdDirectly('MarkRemoved', { id, removed });
@@ -476,17 +673,17 @@ function onUpdateScript() {
   sendCmdDirectly('CheckUpdate', extras.value.data.props.id);
 }
 function onUpdateListed() {
-  sendCmdDirectly('CheckUpdate', Object.keys(store.updatableScripts).map(Number));
+  sendCmdDirectly(
+    'CheckUpdate',
+    Object.keys(store.updatableScripts).map(Number),
+  );
 }
 async function onExclude() {
   const item = extras.value;
   const { data } = item;
   const url = data.pageUrl;
   const { host, domain } = await sendCmdDirectly('GetTabDomain', url);
-  item.excludes = [
-    `${url.split('#')[0]}*`,
-    { host, group: `*.${domain}` },
-  ];
+  item.excludes = [`${url.split('#')[0]}*`, { host, group: `*.${domain}` }];
   await makePause(); // $nextTick runs too early
   item.el.querySelector('input').focus(); // not using $refs as multiple items may show inputs
 }
@@ -499,7 +696,7 @@ async function onExcludeSave(item, btn) {
     id: item.data.props.id,
     custom: {
       excludeMatch: [
-        ...item.data.custom.excludeMatch || [],
+        ...(item.data.custom.excludeMatch || []),
         ...[btn || item.excludes[0].trim()].filter(Boolean),
       ],
     },
@@ -524,7 +721,7 @@ function navigate(dir) {
   } else {
     const up = dir === 'u';
     const step = up || dir === 'l' ? -1 : 1;
-    const key = up || dir === 'd' ? 'top': 'left';
+    const key = up || dir === 'd' ? 'top' : 'left';
     const cur = elems[index].rect[key];
     for (let i = index + step; i >= 0 && i < elems.length; i += step) {
       if ((cur - elems[i].rect[key]) * step < 0) {
@@ -535,7 +732,8 @@ function navigate(dir) {
     }
     if (!found) return;
     if (up) {
-      while (index > 0 && elems[index - 1].rect.top === elems[index].rect.top) index -= 1;
+      while (index > 0 && elems[index - 1].rect.top === elems[index].rect.top)
+        index -= 1;
     }
   }
   elems[index]?.focus();
@@ -556,8 +754,82 @@ function updateMessage() {
   message.value = getActiveElement()?.dataset.message || '';
 }
 function showButtons(item) {
-  return extras.value?.id === item.id || focusedItem.value?.id === item.id || focusBug;
+  return (
+    extras.value?.id === item.id ||
+    focusedItem.value?.id === item.id ||
+    focusBug
+  );
 }
+
+// --- NEW FILE PICKER STATE & METHODS START ---
+const fileInput = ref(null); // Ref for the hidden file input
+const selectedFile = ref(null); // Stores the selected File object
+const selectedFileName = ref(''); // Stores the name for display
+const isDraggingOver = ref(false); // For drag-over visual feedback
+const filePickerMessage = ref(''); // For status messages
+
+const triggerFileInput = () => {
+  fileInput.value.click();
+};
+
+const handleFileChange = (event) => {
+  const file = event.target.files[0];
+  processSelectedFile(file);
+};
+
+const handleDragOver = () => {
+  isDraggingOver.value = true;
+  filePickerMessage.value = i18n('filePickerDropHint'); // Use i18n
+};
+
+const handleDragLeave = () => {
+  isDraggingOver.value = false;
+  filePickerMessage.value = '';
+};
+
+const handleDrop = (event) => {
+  isDraggingOver.value = false;
+  const file = event.dataTransfer.files[0];
+  processSelectedFile(file);
+};
+
+const processSelectedFile = (file) => {
+  if (
+    file &&
+    (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv'))
+  ) {
+    // Check for CSV type or extension
+    selectedFile.value = file;
+    selectedFileName.value = file.name;
+    filePickerMessage.value = i18n('filePickerSelected', file.name); // Use i18n
+  } else {
+    selectedFile.value = null;
+    selectedFileName.value = '';
+    fileInput.value.value = ''; // Clear the input so same file can be selected again
+    filePickerMessage.value = i18n('filePickerInvalidFile'); // Use i18n
+  }
+};
+
+const clearSelectedFile = () => {
+  selectedFile.value = null;
+  selectedFileName.value = '';
+  if (fileInput.value) {
+    // Ensure ref is available before clearing
+    fileInput.value.value = ''; // Clear the input
+  }
+  filePickerMessage.value = i18n('filePickerFileCleared'); // Use i18n
+};
+
+// Helper function to read file as text (Promise-based)
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = (e) => reject(e);
+    reader.readAsText(file);
+  });
+}
+// --- END NEW FILE PICKER STATE & METHODS ---
 
 onMounted(() => {
   keyboardService.enable();
@@ -577,21 +849,175 @@ onMounted(() => {
     keyboardService.register('s-tab', () => handleTabNavigation(-1));
   }
   for (const key of ['up', 'down', 'left', 'right']) {
-    keyboardService.register(key,
-      navigate.bind(null, key[0]),
-      { condition: '!inputFocus' });
+    keyboardService.register(key, navigate.bind(null, key[0]), {
+      condition: '!inputFocus',
+    });
   }
-  keyboardService.register('e', () => {
-    onEditScript(focusedItem.value);
-  }, {
-    condition: '!inputFocus',
-  });
+  keyboardService.register(
+    'e',
+    () => {
+      onEditScript(focusedItem.value);
+    },
+    {
+      condition: '!inputFocus',
+    },
+  );
 });
 
 onActivated(() => {
   // issue #1520: Firefox + Wayland doesn't autofocus the popup so CSS hover doesn't work
   focusBug = !document.hasFocus();
 });
+
+// --- NEW CODE: onRunScriptForPopup method ---
+// violentmonkey/src/popup/views/app.vue
+const onRunScriptForPopup = async (item) => {
+  try {
+    const targetTab = await getActiveTab();
+    if (!targetTab || !targetTab.id) {
+      throw new Error(i18n('errorNoActiveTab'));
+    }
+
+    // --- READ FILE CONTENT HERE ---
+    let fileContent = null;
+    if (selectedFile.value) {
+      try {
+        fileContent = await readFileAsText(selectedFile.value);
+        console.log(
+          `VM popup: File content for "${selectedFileName.value}" read. Length: ${fileContent.length}`,
+        );
+      } catch (e) {
+        console.error('VM popup: Error reading file:', e);
+        showMessage({
+          text: `Error reading file: ${e.message}`,
+          type: 'error',
+        });
+        return; // Stop execution if file reading fails
+      }
+    } else {
+      // If no file is selected, show a warning and prevent script execution
+      showMessage({ text: i18n('filePickerSelectFirst'), type: 'warn' }); // Use i18n
+      return;
+    }
+    // --- END READ FILE CONTENT ---
+
+    // Fetch userscript code as before
+    let userscriptCode;
+    if (item.data.code) {
+      userscriptCode = item.data.code;
+    } else {
+      userscriptCode = await sendCmdDirectly(
+        'GetScriptCode',
+        item.data.props.id,
+      );
+      if (!userscriptCode) {
+        throw new Error(i18n('errorScriptCodeMissing', item.name));
+      }
+      item.data.code = userscriptCode;
+    }
+
+    // --- NEW CODE START ---
+    // Delegate the executeScript call to the background script.
+    // We'll define a new command called 'ExecuteUserscriptInTab'.
+    await sendCmdDirectly('ExecuteUserscriptInTab', {
+      tabId: targetTab.id,
+      scriptCode: item.data.code, // Pass the userscript's full code
+      scriptName: item.name, // Pass the userscript's name
+      scriptId: item.data.props.id, // Pass the userscript's ID
+      fileContent: fileContent, // --- NEW: Pass file content ---
+    });
+    // --- NEW CODE END ---
+
+    console.log(`VM popup: Script ${item.name} manual execution commanded.`);
+    showMessage({
+      text: `Manual execution requested for "${item.name}"`,
+      type: 'info',
+    });
+    window.close();
+  } catch (error) {
+    console.error('VM popup: Manual execution failed:', error);
+    showMessage({
+      text: `Execution failed for "${item.name}": ${error.message || error}`,
+      type: 'error',
+    });
+  }
+};
+// --- END NEW CODE ---
 </script>
 
 <style src="../style.css"></style>
+
+<style>
+.file-picker-section {
+  /* margin-top: 15px; */
+  /* padding: 10px; */
+  border-top: 1px solid var(--fill-3);
+  text-align: center;
+  background-color: var(--fill-0-5);
+
+  h3 {
+    font-size: 1.1rem;
+    /* margin-bottom: 10px; */
+    color: var(--fill-9);
+  }
+
+  .drop-area {
+    border: 2px dashed var(--fill-6);
+    border-radius: 5px;
+    padding: 20px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fill-7);
+    font-size: 0.95rem;
+
+    &:hover {
+      background-color: var(--fill-1);
+    }
+
+    &.drag-over {
+      background-color: var(--fill-2);
+      border-color: var(--fill-9);
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .selected-file-name {
+      font-weight: bold;
+      color: var(--fill-10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .clear-file {
+      cursor: pointer;
+      color: var(--fill-6);
+      font-size: 1.2rem;
+      line-height: 1;
+      padding: 0 4px;
+      border-radius: 3px;
+      &:hover {
+        background-color: var(--fill-3);
+        color: var(--fill-8);
+      }
+    }
+  }
+
+  .file-picker-status {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: var(--fill-7);
+  }
+
+  .underline {
+    text-decoration: underline;
+  }
+}
+</style>
