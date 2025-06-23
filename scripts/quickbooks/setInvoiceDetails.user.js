@@ -1299,6 +1299,7 @@ async function processFileContent(fileContent) {
 
 window.FUNCTION_PLACEHOLDER = async function invoiceAutoFill(fileContent) {
   'use strict';
+  debugger;
   FILEARRAY = await processFileContent(fileContent);
   console.log(FILEARRAY);
 
