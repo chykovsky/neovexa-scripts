@@ -10,6 +10,7 @@
 
 let FILEARRAY;
 let bonusDataRows = [];
+const DEBUGME = false;
 
 async function simulateTypingUsingKeyboard(
   field,
@@ -149,7 +150,7 @@ const providerData = {
     ccEmails: 'agencyinvoices@care.com, accounts@curain.org',
     terms: 'Due on receipt',
     location: 'NJ',
-    inaccurateProductServiceValue: 'Care.com',
+    inaccurateProductServiceValue: ['Care.com'],
     correctProductServiceValue: 'Care.com BUC childcare',
   },
   'Bright Horizons': {
@@ -159,12 +160,23 @@ const providerData = {
     ccEmails: 'accounts@curain.org',
     terms: 'Due on receipt',
     location: 'NJ',
-    inaccurateProductServiceValue: 'BH Childcare',
+    inaccurateProductServiceValue: ['BH Childcare'],
     correctProductServiceValue: 'BH CHC - Childcare & Babysitting',
+  },
+  'Care.com Adult Backup Care': {
+    customerEmail: 'adultcarebilling@care.com',
+    billTo: 'Care.com Adult Backup Care',
+    employeeName: 'Care.com Adult Backup Care',
+    ccEmails: 'accounts@curain.org',
+    terms: 'Due on receipt',
+    location: 'NJ',
+    inaccurateProductServiceValue: [''],
+    correctProductServiceValue: 'Care.com Companionship Services',
   },
 };
 
 function recipientCount(providerName, data, fileArray) {
+  if (DEBUGME) debugger;
   const matchedEntry = providerFunctions[providerName].matchedEntry(
     fileArray,
     normalizeDate(data.serviceDate),
@@ -632,6 +644,21 @@ function getDescriptionDataByProvider(data, fileArray) {
         fileArray,
       )}`;
     },
+    'Care.com Adult Backup Care': function () {
+      return `Service Date: ${data.serviceDate}\nEmployee Name: ${
+        data.client
+      }\nCaregiver: ${extractCaregiver(
+        data.description,
+      )}\nJob ID: ${extractJobID(
+        providerName,
+        data,
+        fileArray,
+      )}\nRequested Start/End Time: ${extractRequestedTime(
+        providerName,
+        data,
+        fileArray,
+      )}\nActual Start/End Time: ${extractTime(data.description)}`;
+    },
   };
   pd.formattedDescription = providerByFormattedDescription[providerName]();
 
@@ -841,6 +868,107 @@ const providerFunctions = {
 
       console.log('✅ Processed Data:');
       console.table(result);
+      return result;
+    },
+  },
+  'Care.com Adult Backup Care': {
+    matchedEntry: function (
+      newDataObject,
+      serviceDate,
+      employeeName,
+      caregiverName,
+    ) {
+      return newDataObject.find(
+        (entry) =>
+          normalizeDate(entry['Date']) === serviceDate &&
+          entry['Caregiver']?.toLowerCase() === caregiverName?.toLowerCase(),
+      );
+    },
+    descriptionFieldTextUpdate: function (descriptionFieldText, matchedEntry) {
+      return descriptionFieldText
+        .replace(/Job ID:\s*XXXXXX__NF/, `Job ID: ${matchedEntry['Job ID']}`)
+        .replace(
+          /Requested Start\/End Time:\s*XXXXXX__NF/,
+          `Requested Start/End Time: ${formatHours(
+            matchedEntry['Hours (Local time)'],
+          )}`,
+        );
+    },
+    casesWithBonuses: function (data) {
+      const caseBonusMap = new Map();
+
+      data.forEach((entry) => {
+        const jobID = entry?.['Job ID'];
+        const bonusRaw = entry?.['Bonus']?.trim();
+
+        // Check if bonus is a valid non-zero monetary value
+        const bonusAmount = parseFloat(bonusRaw?.replace(/[^0-9.]/g, ''));
+
+        if (bonusRaw && bonusAmount > 0 && !caseBonusMap.has(jobID)) {
+          caseBonusMap.set(jobID, bonusRaw); // Preserve the original "$x.xx" format
+        }
+      });
+
+      return caseBonusMap;
+    },
+    processCSV: function (csvText) {
+      const rows = csvText
+        .trim()
+        .split('\n')
+        .map((row) => row.split(','));
+      const headers = rows.shift().map((header) => header.trim()); // Extract headers and remove from rows
+
+      // Columns to keep
+      const keepColumns = [
+        'Job ID',
+        'Date',
+        'Hours (Local time)',
+        'Caregiver',
+        'Bonus',
+        'Cancellation Date',
+      ];
+
+      // Map column indices based on headers
+      const columnIndices = {};
+      headers.forEach((header, index) => {
+        if (keepColumns.includes(header)) {
+          columnIndices[header] = index;
+        }
+      });
+
+      // Group data
+      // TODO Grouped data not needed for Care.com!! Remove this later!!
+      const groupedData = {};
+
+      rows.forEach((row) => {
+        const key = [
+          row[columnIndices['Job ID']] || '',
+          row[columnIndices['Date']] || '',
+          row[columnIndices['Hours (Local time)']] || '',
+          row[columnIndices['Caregiver']] || '',
+        ].join('|');
+
+        const bonus = row[columnIndices['Bonus']] || '';
+        const cancellationDate = row[columnIndices['Cancellation Date']] || '';
+
+        if (!groupedData[key]) {
+          groupedData[key] = {
+            'Job ID': row[columnIndices['Job ID']],
+            Date: row[columnIndices['Date']],
+            'Hours (Local time)': row[columnIndices['Hours (Local time)']],
+            Caregiver: row[columnIndices['Caregiver']],
+            Bonus: bonus,
+            'Cancellation Date': cancellationDate,
+          };
+        }
+      });
+
+      // Convert object into an array of grouped results
+      const result = Object.values(groupedData);
+
+      console.log('✅ Processed Data:');
+      console.table(result);
+
       return result;
     },
   },
@@ -1083,7 +1211,7 @@ async function updateTableRow(data) {
   const productServiceCell = data.productServiceCell;
   if (
     productServiceCell &&
-    data.productService === prvData.inaccurateProductServiceValue
+    prvData.inaccurateProductServiceValue.includes(data.productService)
   ) {
     await selectProductService(
       productServiceCell,
@@ -1299,7 +1427,8 @@ async function processFileContent(fileContent) {
 
 window.FUNCTION_PLACEHOLDER = async function invoiceAutoFill(fileContent) {
   'use strict';
-  debugger;
+
+  if (DEBUGME) debugger;
   FILEARRAY = await processFileContent(fileContent);
   console.log(FILEARRAY);
 
