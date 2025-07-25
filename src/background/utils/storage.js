@@ -19,9 +19,7 @@ class StorageArea {
 
   /** @return {string} */
   toId(key) {
-    return key.startsWith(this.prefix)
-      ? key.slice(this.prefix.length)
-      : '';
+    return key.startsWith(this.prefix) ? key.slice(this.prefix.length) : '';
   }
 
   /**
@@ -67,16 +65,16 @@ class StorageArea {
     if (process.env.DEV && !isObject(data)) {
       throw 'StorageArea.set: data is not an object';
     }
-    await api.set(this.prefix
-      ? data::mapEntry(null, this.toKey, this)
-      : data);
+    await api.set(this.prefix ? data::mapEntry(null, this.toKey, this) : data);
     return data;
   }
 }
 
 // TODO: add Firefox version to the comment when https://bugzil.la/1910669 is fixed
 /** @type {() => Promise<string[]>} Chromium 130+ */
-export const getStorageKeys = api.getKeys;
+// export const getStorageKeys = api.getKeys;
+// after—bind it so `this === api` at call time
+export const getStorageKeys = api.getKeys.bind(api);
 export const S_CACHE = 'cache';
 export const S_CACHE_PRE = 'cac:';
 export const S_CODE = 'code';
@@ -100,10 +98,14 @@ export const storageByPrefix = {};
  * @prop {StorageArea} value
  */
 const storage = {
-  get api() { return api; },
-  set api(val) { api = val; },
-  /** @return {?StorageArea} */// eslint-disable-next-line no-use-before-define
-  forKey: key => storageByPrefix[/^\w+:|$/.exec(key)[0]],
+  get api() {
+    return api;
+  },
+  set api(val) {
+    api = val;
+  },
+  /** @return {?StorageArea} */ // eslint-disable-next-line no-use-before-define
+  forKey: (key) => storageByPrefix[/^\w+:|$/.exec(key)[0]],
   base: new StorageArea('base', ''),
   [S_CACHE]: new StorageArea(S_CACHE, S_CACHE_PRE),
   [S_CODE]: new StorageArea(S_CODE, S_CODE_PRE),

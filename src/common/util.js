@@ -2,19 +2,55 @@
 
 import { NO_CACHE } from '@/common/consts';
 
-export const i18n = memoize((name, args) => chrome.i18n.getMessage(name, args) || name);
+export const i18n = memoize(
+  (name, args) => chrome.i18n.getMessage(name, args) || name,
+);
+
+// export function memoize(func) {
+//   const cacheMap = /*@__PURE__*/Object.create(null);
+//   function memoized(...args) {
+//     const key = args.length === 1 ? `${args[0]}` : JSON.stringify(args);
+//     const res = cacheMap[key];
+//     return res !== undefined || hasOwnProperty(cacheMap, key)
+//       ? res
+//       : (cacheMap[key] = safeApply(func, this, args));
+//   }
+//   return process.env.DEV
+//     ? Object.defineProperty(memoized, 'name', { value: func.name + ':memoized' })
+//     : memoized;
+// }
 
 export function memoize(func) {
-  const cacheMap = /*@__PURE__*/Object.create(null);
+  const cacheMap = Object.create(null);
+
   function memoized(...args) {
-    const key = args.length === 1 ? `${args[0]}` : JSON.stringify(args);
-    const res = cacheMap[key];
-    return res !== undefined || hasOwnProperty(cacheMap, key)
-      ? res
-      : (cacheMap[key] = safeApply(func, this, args));
+    let key;
+    try {
+      // Try to serialize the args array (or single arg) to JSON
+      key = JSON.stringify(args.length === 1 ? args[0] : args);
+      // JSON.stringify(undefined) returns undefined, so guard it:
+      if (key === undefined) key = 'undefined';
+    } catch (err) {
+      // If JSON.stringify fails (circular, symbol, etc.), bail out and skip caching
+      return safeApply(func, this, args);
+    }
+
+    // Now that `key` is guaranteed a string, we can safely check our cache:
+    if (Object.prototype.hasOwnProperty.call(cacheMap, key)) {
+      return cacheMap[key];
+    }
+
+    // Not in cache — call, store, and return
+    const result = safeApply(func, this, args);
+    cacheMap[key] = result;
+    return result;
   }
+
+  // In DEV mode, rename for easier debugging; otherwise return directly
   return process.env.DEV
-    ? Object.defineProperty(memoized, 'name', { value: func.name + ':memoized' })
+    ? Object.defineProperty(memoized, 'name', {
+        value: func.name + ':memoized',
+      })
     : memoized;
 }
 
@@ -61,8 +97,9 @@ export function throttle(func, time) {
 export function noop() {}
 
 export function getRandomString(minLength = 10, maxLength = 0) {
-  for (let rnd = ''; (rnd += Math.random().toString(36).slice(2));) {
-    if (rnd.length >= minLength) return maxLength ? rnd.slice(0, maxLength) : rnd;
+  for (let rnd = ''; (rnd += Math.random().toString(36).slice(2)); ) {
+    if (rnd.length >= minLength)
+      return maxLength ? rnd.slice(0, maxLength) : rnd;
   }
 }
 
@@ -84,10 +121,14 @@ export function buffer2string(buf, offset = 0, length = 1e99) {
   const end = Math.min(arrayLen || buf.byteLength, offset + length);
   const needsSlicing = arrayLen == null || offset || end > sliceSize;
   for (; offset < end; offset += sliceSize) {
-    slices.push(String.fromCharCode.apply(null,
-      needsSlicing
-        ? new Uint8Array(buf, offset, Math.min(sliceSize, end - offset))
-        : buf));
+    slices.push(
+      String.fromCharCode.apply(
+        null,
+        needsSlicing
+          ? new Uint8Array(buf, offset, Math.min(sliceSize, end - offset))
+          : buf,
+      ),
+    );
   }
   return slices.join('');
 }
@@ -103,14 +144,16 @@ export function blob2base64(blob, offset = 0, length = 1e99) {
   if (offset || length < blob.size) {
     blob = blob.slice(offset, offset + length);
   }
-  return !blob.size ? '' : new Promise(resolve => {
-    const reader = new FileReader();
-    reader.readAsDataURL(blob);
-    reader.onload = () => {
-      const res = reader.result;
-      resolve(res.slice(res.indexOf(',') + 1));
-    };
-  });
+  return !blob.size
+    ? ''
+    : new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onload = () => {
+          const res = reader.result;
+          resolve(res.slice(res.indexOf(',') + 1));
+        };
+      });
 }
 
 export function dataUri2text(url) {
@@ -142,9 +185,10 @@ export function compareVersion(ver1, ver2) {
   const [, main1 = ver1 || '', pre1] = VERSION_RE.exec(ver1);
   // eslint-disable-next-line no-restricted-syntax
   const [, main2 = ver2 || '', pre2] = VERSION_RE.exec(ver2);
-  const delta = compareVersionChunk(main1, main2)
-    || !pre1 - !pre2 // 1.2.3-pre-release is less than 1.2.3
-    || pre1 && compareVersionChunk(pre1, pre2, true); // if pre1 is present, pre2 is too
+  const delta =
+    compareVersionChunk(main1, main2) ||
+    !pre1 - !pre2 || // 1.2.3-pre-release is less than 1.2.3
+    (pre1 && compareVersionChunk(pre1, pre2, true)); // if pre1 is present, pre2 is too
   return delta < 0 ? -1 : +!!delta;
 }
 
@@ -159,22 +203,16 @@ function compareVersionChunk(ver1, ver2, isSemverMode) {
     const a = parts1[i];
     const b = parts2[i];
     if (isSemverMode) {
-      delta = DIGITS_RE.test(a) && DIGITS_RE.test(b)
-        ? a - b
-        : a > b || a < b && -1;
+      delta =
+        DIGITS_RE.test(a) && DIGITS_RE.test(b) ? a - b : a > b || (a < b && -1);
     } else {
       delta = (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0);
     }
   }
-  return delta || isSemverMode && (len1 - len2);
+  return delta || (isSemverMode && len1 - len2);
 }
 
-const units = [
-  ['min', 60],
-  ['h', 24],
-  ['d', 1000, 365],
-  ['y'],
-];
+const units = [['min', 60], ['h', 24], ['d', 1000, 365], ['y']];
 export function formatTime(duration) {
   duration /= 60 * 1000;
   const unitInfo = units.find((item) => {
@@ -208,10 +246,7 @@ export function ensureArray(data) {
   return Array.isArray(data) ? data : [data];
 }
 
-const binaryTypes = [
-  'blob',
-  'arraybuffer',
-];
+const binaryTypes = ['blob', 'arraybuffer'];
 
 /**
  * @param {string} url
@@ -226,7 +261,7 @@ export async function requestLocalFile(url, options = {}) {
     /** @type {VMReq.Response} */
     const result = {
       headers: {
-        get: name => xhr.getResponseHeader(name),
+        get: (name) => xhr.getResponseHeader(name),
       },
       url,
     };
@@ -236,7 +271,8 @@ export async function requestLocalFile(url, options = {}) {
     xhr.onload = () => {
       // status for `file:` protocol will always be `0`
       result.status = xhr.status || 200;
-      result.data = xhr[binaryTypes.includes(responseType) ? kResponse : kResponseText];
+      result.data =
+        xhr[binaryTypes.includes(responseType) ? kResponse : kResponseText];
       if (responseType === 'json') {
         try {
           result.data = JSON.parse(result.data);
@@ -302,9 +338,9 @@ export const isCdnUrlRe = re`/^https:\/\/(
     zstatic\.net
   )
 )\//ix`;
-export const isDataUri = /*@__PURE__*/isDataUriRe.test.bind(isDataUriRe);
-export const isValidHttpUrl = url => isHttpOrHttpsRe.test(url) && tryUrl(url);
-export const isRemote = url => url && !isLocalUrlRe.test(decodeURI(url));
+export const isDataUri = /*@__PURE__*/ isDataUriRe.test.bind(isDataUriRe);
+export const isValidHttpUrl = (url) => isHttpOrHttpsRe.test(url) && tryUrl(url);
+export const isRemote = (url) => url && !isLocalUrlRe.test(decodeURI(url));
 
 /** @returns {string|undefined} */
 export function tryUrl(str, base) {
@@ -327,31 +363,40 @@ export async function request(url, options = {}) {
   // fetch supports file:// since Chrome 99 but we use XHR for consistency
   if (url.startsWith('file:')) return requestLocalFile(url, options);
   const { body, headers, [kResponseType]: responseType } = options;
-  const isBodyObj = body && body::({}).toString() === '[object Object]';
-  const [, scheme, auth, hostname, urlTail] = url.match(/^([-\w]+:\/\/)([^@/]*@)?([^/]*)(.*)|$/);
+  const isBodyObj = body && body::{}.toString() === '[object Object]';
+  const [, scheme, auth, hostname, urlTail] = url.match(
+    /^([-\w]+:\/\/)([^@/]*@)?([^/]*)(.*)|$/,
+  );
   // Avoiding LINK header prefetch of js in 404 pages which cause CSP violations in our console
   // TODO: toggle a webRequest/declarativeNetRequest rule to strip LINK headers
-  const accept = (hostname === 'greasyfork.org' || hostname === 'sleazyfork.org')
-    && 'application/javascript, text/plain, text/css';
+  const accept =
+    (hostname === 'greasyfork.org' || hostname === 'sleazyfork.org') &&
+    'application/javascript, text/plain, text/css';
   const init = Object.assign({}, !isRemote(url) && NO_CACHE, options, {
     body: isBodyObj ? JSON.stringify(body) : body,
-    headers: isBodyObj || accept || auth
-      ? Object.assign({},
-        headers,
-        isBodyObj && { 'Content-Type': 'application/json' },
-        auth && { Authorization: `Basic ${btoa(decodeURIComponent(auth.slice(0, -1)))}` },
-        accept && { accept })
-      : headers,
+    headers:
+      isBodyObj || accept || auth
+        ? Object.assign(
+            {},
+            headers,
+            isBodyObj && { 'Content-Type': 'application/json' },
+            auth && {
+              Authorization: `Basic ${btoa(decodeURIComponent(auth.slice(0, -1)))}`,
+            },
+            accept && { accept },
+          )
+        : headers,
   });
   let result = { url, status: -1 };
   try {
     const urlNoAuth = auth ? scheme + hostname + urlTail : url;
     const resp = await fetch(urlNoAuth, init);
-    const loadMethod = {
-      arraybuffer: 'arrayBuffer',
-      blob: 'blob',
-      json: 'json',
-    }[responseType] || 'text';
+    const loadMethod =
+      {
+        arraybuffer: 'arrayBuffer',
+        blob: 'blob',
+        json: 'json',
+      }[responseType] || 'text';
     // status for `file:` protocol will always be `0`
     result.status = resp.status || 200;
     result.headers = resp.headers;

@@ -20,15 +20,20 @@
     "bump": "run-s ci \"bumpVersion --commit\"",
     "preversion": "run-s ci \"bumpVersion --reset\""
   },
+  "sideEffects": [
+    "./src/common/safe-globals-shared.js",
+    "./src/background/background.js",
+    "./src/common/safe-globals.js"
+  ],
   "devDependencies": {
     "@actions/core": "^1.9.0",
-    "@actions/github": "^5.0.3",
-    "@babel/core": "^7.22.10",
+    "@actions/github": "^6.0.1",
+    "@babel/core": "^7.28.0",
     "@babel/eslint-parser": "^7.22.15",
     "@babel/helper-plugin-utils": "^7.18.6",
     "@babel/plugin-syntax-function-bind": "^7.18.6",
-    "@babel/plugin-transform-runtime": "^7.22.10",
-    "@babel/preset-env": "^7.27.2",
+    "@babel/plugin-transform-runtime": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
     "@babel/preset-typescript": "^7.22.5",
     "@types/chrome": "^0.0.208",
     "@types/firefox-webext-browser": "94.0.1",
@@ -41,7 +46,7 @@
     "amo-upload": "^0.5.5",
     "autoprefixer": "^10.4.15",
     "babel-jest": "^30.0.1",
-    "babel-loader": "^9.1.3",
+    "babel-loader": "^10.0.0",
     "babel-plugin-module-resolver": "^5.0.0",
     "babel-plugin-transform-modern-regexp": "^0.0.6",
     "cross-env": "^7.0.3",
@@ -55,7 +60,7 @@
     "eslint-plugin-prettier": "^5.0.0",
     "eslint-plugin-vue": "^9.27.0",
     "fancy-log": "^2.0.0",
-    "gulp": "^4.0.2",
+    "gulp": "^5.0.1",
     "gulp-plumber": "^1.1.0",
     "html-webpack-plugin": "^5.6.0",
     "husky": "^8.0.1",
@@ -74,6 +79,7 @@
     "postcss-scss": "^4.0.4",
     "postcss-simple-vars": "^6.0.3",
     "prettier": "^3.0.2",
+    "regexp-tree": "^0.1.27",
     "sharp": "^0.32.6",
     "style-loader": "^3.3.3",
     "svg-sprite-loader": "^6.0.11",
@@ -85,7 +91,8 @@
     "vue-tsc": "^2.0.29",
     "webpack": "^5.95.0",
     "webpack-bundle-analyzer": "^4.10.2",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "webpack-extension-manifest-plugin": "^0.8.0"
   },
   "author": "Gerald <i@gerald.top>",
   "repository": {
@@ -113,4 +120,3 @@
     "firefox >= 58"
   ]
 }
-

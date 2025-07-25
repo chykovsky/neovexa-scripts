@@ -6,8 +6,10 @@
  * Not exporting NodeJS built-in globals as this file is imported in the test scripts.
  */
 
-const global = process.env.TEST ? globalThis : this; // eslint-disable-line no-undef
-const { window } = global; // it's unforgeable so we extract it primarily to improve minification
+// const global = process.env.TEST ? globalThis : this; // eslint-disable-line no-undef
+// const { window } = global; // it's unforgeable so we extract it primarily to improve minification
+const g = globalThis;
+const { window } = g; // safe: globalThis is always an object
 export const VIOLENTMONKEY = 'Violentmonkey';
 export const AUTO = 'auto';
 export const CONTENT = 'content';
@@ -30,6 +32,6 @@ export const kSessionId = 'sessionId';
 export const kTop = 'top';
 export const kXhrType = 'xhrType';
 export const SKIP_SCRIPTS = 'SkipScripts';
-export const isFunction = val => typeof val === 'function';
-export const isObject = val => val != null && typeof val === 'object';
+export const isFunction = (val) => typeof val === 'function';
+export const isObject = (val) => val != null && typeof val === 'object';
 export const kFileName = 'fileName';

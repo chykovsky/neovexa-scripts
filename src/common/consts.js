@@ -31,10 +31,18 @@ export const NEWLINE_END_RE = /\n((?!\n)\s)*$/;
 export const WATCH_STORAGE = 'watchStorage';
 // `browser` is a local variable since we remove the global `chrome` and `browser` in injected*
 // to prevent exposing them to userscripts with `@inject-into content`
-export const browser = process.env.IS_INJECTED !== 'injected-web' && global.browser;
+// export const browser = process.env.IS_INJECTED !== 'injected-web' && global.browser;
+
+// new
+// If we’re in “injected‑web” mode, skip; otherwise
+// use browser.* if available (Firefox), or fall back to chrome.* (Chrome MV3).
+export const browser =
+  process.env.IS_INJECTED === 'injected-web'
+    ? undefined
+    : (globalThis.browser ?? globalThis.chrome);
 
 // setTimeout truncates the delay to a 32-bit signed integer so the max delay is ~24 days
-export const TIMEOUT_MAX = 0x7FFF_FFFF;
+export const TIMEOUT_MAX = 0x7fff_ffff;
 export const TIMEOUT_HOUR = 60 * 60 * 1000;
 export const TIMEOUT_24HOURS = 24 * 60 * 60 * 1000;
 export const TIMEOUT_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -50,7 +58,7 @@ export const KNOWN_INJECT_INTO = {
   [CONTENT]: 1,
 };
 export const NO_CACHE = { cache: 'no-cache' };
-export const __CODE = /*@__PURE__*/Symbol('code'); // not enumerable and stripped when serializing
+export const __CODE = /*@__PURE__*/ Symbol('code'); // not enumerable and stripped when serializing
 export const UA_PROPS = ['userAgent', 'brands', 'mobile', 'platform'];
 export const TL_AWAIT = 'topLevelAwait';
 export const UNWRAP = 'unwrap';

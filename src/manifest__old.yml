@@ -3,23 +3,24 @@ version: __VERSION__
 manifest_version: 3
 description: __MSG_extDescription__
 author: Gerald
-homepage_url: https://violentmonkey.github.io/
+homepage_url: 'https://violentmonkey.github.io/'
 icons:
-  "16": public/images/icon16.png
-  "48": public/images/icon48.png
-  "128": public/images/icon128.png
+  '16': public/images/icon16.png
+  '48': public/images/icon48.png
+  '128': public/images/icon128.png
 default_locale: en
-action:
+browser_action:
+  browser_style: true
   default_icon:
-    "16": public/images/icon16b.png
-    "32": public/images/icon32b.png
-    "38": public/images/icon38b.png
-    "48": public/images/icon48b.png
-    "64": public/images/icon64b.png
+    '16': public/images/icon16b.png
+    '32': public/images/icon32b.png
+    '38': public/images/icon38b.png # for Android 1.5xDPI
+    '48': public/images/icon48b.png # for Android 2xDPI
+    '64': public/images/icon64b.png
   default_title: __MSG_extName__
   default_popup: popup/index.html
 background:
-  service_worker: background.js
+  scripts: []
 options_ui:
   page: options/index.html#settings
   open_in_tab: true
@@ -33,17 +34,17 @@ content_scripts:
     all_frames: true
 permissions:
   - tabs
+  - <all_urls>
   - webRequest
+  - webRequestBlocking
   - notifications
   - storage
   - unlimitedStorage
   - clipboardWrite
   - contextMenus
   - cookies
-host_permissions:
-  - <all_urls>
 commands:
-  _execute_action: {}
+  _execute_browser_action: {}
   toggleInjection:
     description: __MSG_toggleInjection__
   dashboard:
@@ -58,8 +59,14 @@ commands:
     description: __MSG_updateScriptsAll__
   updateScriptsInTab:
     description: __MSG_updateScriptsInTab__
-minimum_chrome_version: "61.0"
+
+minimum_chrome_version: '61.0'
+# 61: URLSearchParams(obj)
+# 61: scrollIntoView({ behavior: 'smooth' })
+# 60: {...spreadOrRest}
+# 60: CSS :focus-within
+
 browser_specific_settings:
   gecko:
-    id: "{aecec67f-0d10-4fa7-b7c7-609a2db280cf}"
-    strict_min_version: "58.0"
+    id: '{aecec67f-0d10-4fa7-b7c7-609a2db280cf}'
+    strict_min_version: '58.0'

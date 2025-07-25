@@ -1,10 +1,18 @@
 const webpack = require('webpack');
+const path = require('path');
+const WebExtensionManifestPlugin = require('webpack-extension-manifest-plugin');
 const { ListBackgroundScriptsPlugin } = require('./manifest-helper');
-const { addWrapperWithGlobals, getCodeMirrorThemes } = require('./webpack-util');
+const {
+  addWrapperWithGlobals,
+  getCodeMirrorThemes,
+} = require('./webpack-util');
 const ProtectWebpackBootstrapPlugin = require('./webpack-protect-bootstrap-plugin');
 const { getVersion } = require('./version-helper');
 const { configLoader } = require('./config-helper');
 const { getBaseConfig, getPageConfig, isProd } = require('./webpack-base');
+
+// Import the readManifest function from your manifest-helper.js
+// const { readManifest } = require('./manifest-helper'); // Add this line
 
 // Avoiding collisions with globals of a content-mode userscript
 const INIT_FUNC_NAME = '**VMInitInjection**';
@@ -27,9 +35,12 @@ configLoader
   });
 
 const pickEnvs = (items) => {
-  return Object.assign({}, ...items.map(key => ({
-    [`process.env.${key}`]: JSON.stringify(configLoader.get(key)),
-  })));
+  return Object.assign(
+    {},
+    ...items.map((key) => ({
+      [`process.env.${key}`]: JSON.stringify(configLoader.get(key)),
+    })),
+  );
 };
 
 const defsObj = {
@@ -57,11 +68,13 @@ const skipReinjectionHeader = `{
 
 const buildConfig = (page, entry, init) => {
   const config = entry ? getBaseConfig() : getPageConfig();
-  config.plugins.push(new webpack.DefinePlugin({
-    ...defsObj,
-    // Conditional compilation to remove unsafe and unused stuff from `injected`
-    'process.env.IS_INJECTED': JSON.stringify(/injected/.test(page) && page),
-  }));
+  config.plugins.push(
+    new webpack.DefinePlugin({
+      ...defsObj,
+      // Conditional compilation to remove unsafe and unused stuff from `injected`
+      'process.env.IS_INJECTED': JSON.stringify(/injected/.test(page) && page),
+    }),
+  );
   if (typeof entry === 'string') {
     config.entry = { [page]: entry };
   }
@@ -70,38 +83,226 @@ const buildConfig = (page, entry, init) => {
   return config;
 };
 
+// **Crucial Change:** Load the manifest data synchronously here
+// Webpack config needs to be synchronous, so we need to load the YAML file
+// before module.exports is evaluated.
+// Since `readManifest` from `manifest-helper.js` is async, we'll
+// need to create a synchronous version or handle it differently for Webpack.
+// For simplicity in the Webpack config, we'll read it directly here using `js-yaml` sync.
+
+const fs = require('fs'); // Require fs here
+const yaml = require('js-yaml'); // Require js-yaml here
+
+let baseManifestData;
+try {
+  const manifestYmlContent = fs.readFileSync('./src/manifest.yml', 'utf8');
+  baseManifestData = yaml.load(manifestYmlContent);
+} catch (e) {
+  console.error('Error loading manifest.yml:', e);
+  process.exit(1); // Exit if manifest can't be loaded
+}
+
 module.exports = [
   buildConfig((config) => {
-    addWrapperWithGlobals('common', config, defsObj, getGlobals => ({
+    addWrapperWithGlobals('common', config, defsObj, (getGlobals) => ({
       header: () => `{ ${getGlobals()}`,
       footer: '}',
-      test: /^(?!injected|public).*\.js$/,
+      test: /^(?!injected|public|background).*\.js$/,
     }));
-    config.plugins.push(new ListBackgroundScriptsPlugin({
-      minify: false, // keeping readable
-    }));
+    config.plugins.push(
+      new ListBackgroundScriptsPlugin({
+        minify: false, // keeping readable
+      }),
+    );
   }),
 
   buildConfig('injected', './src/injected', (config) => {
     config.plugins.push(new ProtectWebpackBootstrapPlugin());
-    addWrapperWithGlobals('injected/content', config, defsObj, getGlobals => ({
-      header: () => `${skipReinjectionHeader} { ${getGlobals()}`,
-      footer: '}}',
-    }));
+    addWrapperWithGlobals(
+      'injected/content',
+      config,
+      defsObj,
+      (getGlobals) => ({
+        header: () => `${skipReinjectionHeader} { ${getGlobals()}`,
+        footer: '}}',
+      }),
+    );
   }),
 
   buildConfig('injected-web', './src/injected/web', (config) => {
     config.output.libraryTarget = 'commonjs2';
     config.plugins.push(new ProtectWebpackBootstrapPlugin());
-    addWrapperWithGlobals('injected/web', config, defsObj, getGlobals => ({
+    addWrapperWithGlobals('injected/web', config, defsObj, (getGlobals) => ({
       header: () => `${skipReinjectionHeader}
-        window[INIT_FUNC_NAME] = function (IS_FIREFOX,${PAGE_MODE_HANDSHAKE},${VAULT_ID}) {
-          const module = { __proto__: null };
-          ${getGlobals()}`,
+          window[INIT_FUNC_NAME] = function (IS_FIREFOX,${PAGE_MODE_HANDSHAKE},${VAULT_ID}) {
+            const module = { __proto__: null };
+            ${getGlobals()}`,
       footer: `
-          const { exports } = module;
-          return exports.__esModule ? exports.default : exports;
-        }};0;`,
+            const { exports } = module;
+            return exports.__esModule ? exports.default : exports;
+          }}};0;`,
     }));
+  }),
+
+  buildConfig('background', './src/background/background.js', (config) => {
+    config.target = 'webworker';
+    config.output.filename = 'background.js';
+    config.optimization.splitChunks = false;
+    config.optimization.runtimeChunk = false;
+
+    config.plugins = config.plugins || [];
+    // Remove the old ListBackgroundScriptsPlugin if it's there
+    config.plugins = config.plugins.filter(
+      (p) => p.constructor.name !== 'ListBackgroundScriptsPlugin',
+    );
+
+    // **add** the MV3 manifest plugin with the pre-loaded YAML data:
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        global: 'self',
+        window: 'self',
+        // IS_FIREFOX: JSON.stringify(false),
+        // SCRIPTS: JSON.stringify(`#scripts`),
+        // ICON_PREFIX: JSON.stringify('scripts'),
+        // add other defines as needed
+      }),
+      new WebExtensionManifestPlugin({
+        config: {
+          // Pass the parsed YAML object directly
+          base: baseManifestData, // <--- CORRECTED LINE
+          extend: {
+            manifest_version: 3,
+            background: { service_worker: 'background.js' },
+            // If you need host_permissions or CSP tweaks that are not in your base manifest, add them here
+            // host_permissions: ['*://*/*'],
+            // content_security_policy: {
+            //   extension_pages: "script-src 'self'; object-src 'self'",
+            // },
+          },
+        },
+      }),
+      new webpack.ProvidePlugin({
+        IS_APPLIED: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'IS_APPLIED',
+        ],
+        IS_FIREFOX: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'IS_FIREFOX',
+        ],
+        ROUTE_SCRIPTS: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'ROUTE_SCRIPTS',
+        ],
+        ICON_PREFIX: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'ICON_PREFIX',
+        ],
+        TAB_SETTINGS: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'TAB_SETTINGS',
+        ],
+        TAB_ABOUT: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'TAB_ABOUT',
+        ],
+        TAB_RECYCLE: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'TAB_RECYCLE',
+        ],
+        BROWSER_ACTION: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'BROWSER_ACTION',
+        ],
+        INJECT: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'INJECT',
+        ],
+        MULTI: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'MULTI',
+        ],
+        VIOLENTMONKEY: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'VIOLENTMONKEY',
+        ],
+        AUTO: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'AUTO',
+        ],
+        CONTENT: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'CONTENT',
+        ],
+        EXPOSE: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'EXPOSE',
+        ],
+        FORCE_CONTENT: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'FORCE_CONTENT',
+        ],
+        IDS: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'IDS',
+        ],
+        ID_BAD_REALM: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'ID_BAD_REALM',
+        ],
+        ID_INJECTING: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'ID_INJECTING',
+        ],
+        INJECT_INTO: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'INJECT_INTO',
+        ],
+        MORE: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'MORE',
+        ],
+        PAGE: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'PAGE',
+        ],
+        RUN_AT: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'RUN_AT',
+        ],
+        SCRIPTS: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'SCRIPTS',
+        ],
+        VALUES: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'VALUES',
+        ],
+        SKIP_SCRIPTS: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'SKIP_SCRIPTS',
+        ],
+        browser: [
+          path.resolve(__dirname, '../src/common/consts.js'),
+          'browser',
+        ],
+        extensionOptionsPage: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'extensionOptionsPage',
+        ],
+        extensionManifest: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'extensionManifest',
+        ],
+        safeApply: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'safeApply',
+        ],
+        safeCall: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'safeCall',
+        ],
+      }),
+    );
   }),
 ];
