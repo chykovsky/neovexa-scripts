@@ -108,16 +108,33 @@ module.exports = [
       header: () => `{ ${getGlobals()}`,
       footer: '}',
       test: /^(?!injected|public|background).*\.js$/,
+      // test: /^(?!injected|public).*\.js$/,
     }));
     config.plugins.push(
       new ListBackgroundScriptsPlugin({
         minify: false, // keeping readable
       }),
+      new webpack.DefinePlugin({
+        global: 'globalThis',
+        // defineProperty: 'Object.defineProperty',
+      }),
+      new webpack.ProvidePlugin({
+        browser: [
+          path.resolve(__dirname, '../src/common/consts.js'),
+          'browser',
+        ],
+      }),
     );
   }),
 
   buildConfig('injected', './src/injected', (config) => {
-    config.plugins.push(new ProtectWebpackBootstrapPlugin());
+    config.plugins.push(
+      new ProtectWebpackBootstrapPlugin(),
+      new webpack.DefinePlugin({
+        global: 'globalThis',
+        // defineProperty: 'Object.defineProperty',
+      }),
+    );
     addWrapperWithGlobals(
       'injected/content',
       config,
@@ -131,7 +148,82 @@ module.exports = [
 
   buildConfig('injected-web', './src/injected/web', (config) => {
     config.output.libraryTarget = 'commonjs2';
+    config.plugins.push(
+      // new ProtectWebpackBootstrapPlugin(),
+      new webpack.DefinePlugin({
+        global: 'globalThis',
+        // defineProperty: 'Object.defineProperty',
+      }),
+    );
+    // 2) Prepend a real defineProperty alias *before* the webpack runtime
+    config.plugins.push(
+      new webpack.BannerPlugin({
+        banner: [
+          // define a module.exports target for webpack runtime
+          'const module = { exports: {} };',
+          // webpack bootstrap helpers
+          'const defineProperty = Object.defineProperty;',
+          'const toStringTagSym = typeof Symbol !== "undefined" && Symbol.toStringTag;',
+          // basic JS primitives & fallbacks
+          'const cloneInto             = obj => obj;',
+          'const createNullObj = () => Object.create(null);',
+          'const assign = Object.assign;',
+          'const getPrototypeOf   = Object.getPrototypeOf;',
+          'const jsonParse        = JSON.parse;',
+          'const logging          = console;',
+          // script-injection state
+          'const PAGE_MODE_HANDSHAKE = false;',
+          'const IS_FIREFOX            = false;',
+          'let VAULT_ID;',
+          // GM-API shime
+          'let   callbackResult;               ',
+          // "Safe" wrappers of globals
+          'const SafeSymbol       = Symbol;',
+          'const SafeCustomEvent       = CustomEvent;',
+          'const SafeMouseEvent        = MouseEvent;',
+          'const SafeError             = Error;',
+          'const SafePromise           = Promise;',
+          'const SafeDOMParser         = DOMParser;',
+          'const SafeURL               = URL;',
+          'const SafeKeyboardEvent     = KeyboardEvent;',
+          'const SafeProxy             = Proxy;',
+          'let builtinGlobals   = [Object.getOwnPropertyNames(globalThis), globalThis];',
+          'const safeCall             = Function.prototype.call.bind(Function.prototype.call);',
+          'const getWindowLength      = function() { return this.length; };',
+          'const isString             = v => typeof v === "string";',
+          'const describeProperty     = Object.getOwnPropertyDescriptor;',
+          'const setPrototypeOf       = Object.setPrototypeOf;',
+          'const isObject             = v => v != null && typeof v === "object";',
+          'const nullObjFrom           = src => { const out = Object.create(null); for (const k in src) out[k] = src[k]; return out; };',
+          'const isFunction           = v => typeof v === "function";',
+          'const objectValues         = Object.values;',
+          'const forEach              = Array.prototype.forEach;',
+          'const objectKeys           = Object.keys;',
+          'const safeApply            = Reflect.apply;',
+          'const concat               = Array.prototype.concat;',
+          'const setOwnProp           = (o, p, v) => defineProperty(o, p, { value: v, enumerable: true, writable: true, configurable: true });',
+          'const SafeEventTarget      = EventTarget;',
+          'const PROTO                = "__proto__";',
+          'const reflectOwnKeys       = Reflect.ownKeys;',
+        ].join('\n'),
+        raw: true,
+        entryOnly: false, // apply to all files in this build
+      }),
+    );
+    // 3) I'm just moving ProtectWebpackBootstrapPlugin afterwards
     config.plugins.push(new ProtectWebpackBootstrapPlugin());
+
+    // Auto‑inject all safe‑globals, including kResponseType
+    config.plugins.push(
+      new webpack.ProvidePlugin({
+        // …other auto‑imports…,
+        kResponseType: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'kResponseType',
+        ],
+      }),
+    );
+
     addWrapperWithGlobals('injected/web', config, defsObj, (getGlobals) => ({
       header: () => `${skipReinjectionHeader}
           window[INIT_FUNC_NAME] = function (IS_FIREFOX,${PAGE_MODE_HANDSHAKE},${VAULT_ID}) {
@@ -141,6 +233,8 @@ module.exports = [
             const { exports } = module;
             return exports.__esModule ? exports.default : exports;
           }}};0;`,
+      // ONLY wrap our entry script, not the runtime or chunks:
+      test: /[\\/]src[\\/]injected[\\/]web[\\/]index\.js$/,
     }));
   }),
 
@@ -160,6 +254,7 @@ module.exports = [
     config.plugins.push(
       new webpack.DefinePlugin({
         global: 'self',
+        // global: 'globalThis',
         window: 'self',
         // IS_FIREFOX: JSON.stringify(false),
         // SCRIPTS: JSON.stringify(`#scripts`),
@@ -182,6 +277,27 @@ module.exports = [
         },
       }),
       new webpack.ProvidePlugin({
+        // from src/common/safe-globals.js
+        SafePromise: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'SafePromise',
+        ],
+        SafeError: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'SafeError',
+        ],
+        safeApply: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'safeApply',
+        ],
+        hasOwnProperty: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'hasOwnProperty',
+        ],
+        safeCall: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'safeCall',
+        ],
         IS_APPLIED: [
           path.resolve(__dirname, '../src/common/safe-globals.js'),
           'IS_APPLIED',
@@ -193,6 +309,22 @@ module.exports = [
         ROUTE_SCRIPTS: [
           path.resolve(__dirname, '../src/common/safe-globals.js'),
           'ROUTE_SCRIPTS',
+        ],
+        extensionRoot: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'extensionRoot',
+        ],
+        extensionOrigin: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'extensionOrigin',
+        ],
+        extensionManifest: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'extensionManifest',
+        ],
+        extensionOptionsPage: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'extensionOptionsPage',
         ],
         ICON_PREFIX: [
           path.resolve(__dirname, '../src/common/safe-globals.js'),
@@ -214,6 +346,14 @@ module.exports = [
           path.resolve(__dirname, '../src/common/safe-globals.js'),
           'BROWSER_ACTION',
         ],
+        kDocumentId: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'kDocumentId',
+        ],
+        kFrameId: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'kFrameId',
+        ],
         INJECT: [
           path.resolve(__dirname, '../src/common/safe-globals.js'),
           'INJECT',
@@ -222,6 +362,12 @@ module.exports = [
           path.resolve(__dirname, '../src/common/safe-globals.js'),
           'MULTI',
         ],
+        kWindowId: [
+          path.resolve(__dirname, '../src/common/safe-globals.js'),
+          'kWindowId',
+        ],
+
+        // from src/common/safe-globals-shared.js
         VIOLENTMONKEY: [
           path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
           'VIOLENTMONKEY',
@@ -278,29 +424,54 @@ module.exports = [
           path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
           'VALUES',
         ],
+        kResponse: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'kResponse',
+        ],
+        kResponseHeaders: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'kResponseHeaders',
+        ],
+        kResponseText: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'kResponseText',
+        ],
+        kResponseType: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'kResponseType',
+        ],
+        kSessionId: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'kSessionId',
+        ],
+        kTop: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'kTop',
+        ],
+        kXhrType: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'kXhrType',
+        ],
         SKIP_SCRIPTS: [
           path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
           'SKIP_SCRIPTS',
         ],
+        isFunction: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'isFunction',
+        ],
+        isObject: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'isObject',
+        ],
+        kFileName: [
+          path.resolve(__dirname, '../src/common/safe-globals-shared.js'),
+          'kFileName',
+        ],
+        // Inject `browser` from your common/consts.js wrapper
         browser: [
           path.resolve(__dirname, '../src/common/consts.js'),
           'browser',
-        ],
-        extensionOptionsPage: [
-          path.resolve(__dirname, '../src/common/safe-globals.js'),
-          'extensionOptionsPage',
-        ],
-        extensionManifest: [
-          path.resolve(__dirname, '../src/common/safe-globals.js'),
-          'extensionManifest',
-        ],
-        safeApply: [
-          path.resolve(__dirname, '../src/common/safe-globals.js'),
-          'safeApply',
-        ],
-        safeCall: [
-          path.resolve(__dirname, '../src/common/safe-globals.js'),
-          'safeCall',
         ],
       }),
     );

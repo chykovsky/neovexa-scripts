@@ -1,5 +1,8 @@
 /* eslint-disable no-unused-vars */
 
+// ensure `global` always exists in injected scripts, popups, pages, workers…
+const global = globalThis;
+
 /**
  * This file is used first by the entire `src` including `injected`.
  * `global` is used instead of WebPack's polyfill which we disable in webpack.conf.js.
@@ -7,9 +10,11 @@
  */
 
 // const global = process.env.TEST ? globalThis : this; // eslint-disable-line no-undef
-// const { window } = global; // it's unforgeable so we extract it primarily to improve minification
-const g = globalThis;
-const { window } = g; // safe: globalThis is always an object
+const { window } = global; // it's unforgeable so we extract it primarily to improve minification. Reenabled this because of what I added above.
+
+// const g = globalThis;
+// const { window } = g; // safe: globalThis is always an object
+
 export const VIOLENTMONKEY = 'Violentmonkey';
 export const AUTO = 'auto';
 export const CONTENT = 'content';
