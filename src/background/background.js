@@ -1,19 +1,46 @@
 import { addPublicCommands, commands, init } from './utils';
+
+// these two must come first so their `addOwnCommands({ InitPopup… })`
+// and `addOwnCommands({ SyncGetStates… })` have run by the time we
+// attach our onMessage handler:
 import './utils/popup-tracker';
 import './sync'; // <-- loads sync/index.js, which calls addOwnCommands({ SyncGetStates: getStates, … })
 
 // 3) Polyfill browser.tabs.executeScript under MV3 to use chrome.scripting.executeScript
 //    MV3 service workers no longer have tabs.executeScript, so we re‑define it.
+// if (!chrome.tabs.executeScript && chrome.scripting) {
+//   // NOTE: we assume `browser` is aliased to `chrome` by your browser.js polyfill
+//   browser.tabs.executeScript = (tabId, details) => {
+//     // details.code is a string of JS — we wrap it in a Function
+//     const fn = new Function(details.code);
+//     return chrome.scripting
+//       .executeScript({
+//         target: { tabId, allFrames: details.allFrames || false },
+//         world: 'MAIN', // inject into page context
+//         func: fn,
+//       })
+//       .then((results) => results.map((r) => r.result));
+//   };
+// }
+
+// 3) Polyfill browser.tabs.executeScript under MV3 to use chrome.scripting.executeScript
+//    MV3 service workers no longer have tabs.executeScript, so we re‑define it.
 if (!chrome.tabs.executeScript && chrome.scripting) {
-  // NOTE: we assume `browser` is aliased to `chrome` by your browser.js polyfill
+  // we assume your browser.js has already aliased `browser === chrome`
   browser.tabs.executeScript = (tabId, details) => {
-    // details.code is a string of JS — we wrap it in a Function
-    const fn = new Function(details.code);
+    const { code, allFrames = false } = details;
     return chrome.scripting
       .executeScript({
-        target: { tabId, allFrames: details.allFrames || false },
-        world: 'MAIN', // inject into page context
-        func: fn,
+        target: { tabId, allFrames },
+        world: 'MAIN', // page context instead of isolated world
+        func: (userCode) => {
+          // runs in the page: inject a <script> tag carrying your code
+          const s = document.createElement('script');
+          s.textContent = userCode;
+          (document.head || document.documentElement).appendChild(s);
+          s.remove();
+        },
+        args: [code], // pass in details.code as the lone argument
       })
       .then((results) => results.map((r) => r.result));
   };
@@ -56,34 +83,9 @@ import './utils/storage-fetch';
 import './utils/tab-redirector';
 import './utils/tester';
 import './utils/update';
-// import { isFunction } from '@/common/safe-globals-shared';
-// import { IDS, kFrameId } from '@/common/consts';
-// import {
-//   getAllScriptsForTab,
-//   getUserOptions,
-//   computeMoreIds,
-//   getScriptsByIds,
-// } from './utils/popup‑helpers';
-//
-//
 
-// 1) A quick onMessage handler for popup commands.
-//    This bypasses the “no src.tab && no mode” guard in handleCommandMessage.
-
-// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-//   const { cmd, data } = message;
-//   if (cmd === 'InitPopup' || cmd === 'GetMoreIds' || cmd === 'GetData') {
-//     const fn = commands[cmd];
-//     if (fn) {
-//       // call it as if it were a public command
-//       Promise.resolve(fn(data, { tab: sender.tab || false }))
-//         .then((result) => sendResponse(result))
-//         .catch((err) => sendResponse({ error: err.message }));
-//       return true; // keep channel open for async sendResponse
-//     }
-//   }
-//   // otherwise fall through to the existing handleCommandMessage listener
-// });
+// bring in resolveInit so we can unlock the queue:
+import { resolveInit } from './utils/init';
 
 function getSafeFunctionName(scriptName) {
   // Replace non-word characters with underscores and ensure it starts with a letter
@@ -175,33 +177,6 @@ addPublicCommands({
       throw new Error('Failed to execute script: ' + scriptName);
     }
   },
-
-  // // popup start‑up
-  // async InitPopup(_, src) {
-  //   const tabId = src.tab?.id;
-  //   const cached = {}; // no cached SetPopup calls yet
-  //   const scripts = await getAllScriptsForTab(tabId); // your existing helper
-  //   const opts = await getUserOptions(); // load the options your popup needs
-  //   const payload = {
-  //     tab: { id: tabId },
-  //     [IDS]: {}, // initial empty id‑map
-  //     scripts,
-  //     ...opts,
-  //   };
-  //   const failureTuple = ['', null, null];
-  //   return [cached, payload, failureTuple];
-  // },
-
-  // // when popup calls sendCmdDirectly('GetMoreIds', { url, kFrameId, IDS })
-  // async GetMoreIds({ url, [kFrameId]: frameId, [IDS]: ids }) {
-  //   return await computeMoreIds(url, frameId, ids);
-  // },
-
-  // // when popup calls sendCmdDirectly('GetData', { ids })
-  // async GetData({ ids }) {
-  //   const metas = await getScriptsByIds(ids);
-  //   return { scripts: metas };
-  // },
 });
 
 function handleCommandMessage({ cmd, data, url, [kTop]: mode } = {}, src) {
@@ -257,10 +232,5 @@ browser.commands?.onCommand.addListener(async (cmd) => {
   handleHotkeyOrMenu(cmd, await getActiveTab());
 });
 
-// For service worker context:
-// globalThis.isFunction = isFunction;
-// const defaultImage = `${ICON_PREFIX}128.png`;
-// globalThis.defaultImage1 = defaultImage;
-
-// const scripts1 = `#${SCRIPTS}`;
-// globalThis.scripts1 = scripts1;
+// signal that our background “init” is complete and commands can run:
+resolveInit();
